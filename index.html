@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="Image/favicon.png" type="image/x-icon">
+    <title>What is my IP | IP Info</title>
+    <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <script>
+        fetch('https://json.geoiplookup.io')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("ip").innerHTML = data.ip
+            document.getElementById("region").innerHTML = data.region
+            document.getElementById("district").innerHTML = data.district
+            document.getElementById("latitude").innerHTML = data.latitude
+            document.getElementById("longitude").innerHTML = data.longitude
+            document.getElementById("timezone_name").innerHTML = data.timezone_name
+            document.getElementById("country").innerHTML = data.country_name
+            document.getElementById("asn_org").innerHTML = data.asn_org
+            document.getElementById("city").innerHTML = data.city
+            document.getElementById("hostname").innerHTML = data.hostname
+            
+        });
+    </script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            background: #EEEEEE;
+            display: flex;
+            flex-direction: column;
+            width: 70%;
+            margin: auto;
+            justify-content: center;
+            padding: 20px 0;
+        }
+        div.wrapper {
+            display: flex;
+        }
+        div.IPLocation {
+            flex: 1;
+            background-color: #FEFEFE;
+            padding:30px 60px;
+            margin-right: 20px;
+            margin-bottom: 40px;
+            box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 50px;
+        }
+        div.ipAddr {
+            flex: 1;
+            margin-left: 20px;
+            background-color: #FEFEFE;
+            padding:30px 60px;
+            text-align: center;
+            margin-bottom: 40px;
+            font-weight: bold;
+            box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 50px;
+        }
+        div.ipAddr p {
+            background-color: #21c031;
+            padding: 8px 40px;
+            color: white;
+            font-size: 18px;
+        }
+        div#table_box {
+            
+            background-color: #FEFEFE;
+            padding: 60px;
+            box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 50px;
+        }
+        caption {
+            text-align: left;
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        #table_box table {
+            width: 100%;
+            font-size: 18px;
+            border-collapse: collapse;
+        }
+        #table_box tr:nth-child(2n+1) th {
+            background: #dd03ff;
+        }
+        #table_box th {
+            color: white;
+            background: #08f0ab;
+            font-weight: bold;
+            text-align: left;
+            padding: 14px;
+            
+            
+        }
+        #table_box td {
+            padding: 0px 20px;
+        }
+        #table_box tr:nth-child(2n+1) td {
+            background: #D9D9D9;
+        }
+        #table_box tr:nth-child(2n) td {
+            background: #F1F1F1;
+        }
+        #table_box tr td:hover {
+            background: #666;
+            color: #FFF;
+        }
+        span.icon {
+            margin-top: 4px;
+            margin-right: 8px;
+            
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="IPLocation animate__animated animate__backInDown">
+            <h2>Where is My IP Location?</h2>
+            <p>Find out what your public IPv4 and IPv6 address is revealing about you! My IP address information shows your IP location; city, region, country, ISP / Provider Name</p>
+            <p>Do you want to hide you're IP Address? <br> 
+            <span class="design"> Click here!</span> </p>
+        </div>
+        <div class="ipAddr animate__animated animate__backInRight animate__slow">
+            <h2>Your IP Address is</h2>
+            <p id="ip"></p>
+        </div>
+    </div>
+    <div id="table_box" class="animate__animated animate__fadeIn animate__slower animate__delay-1s">
+        <table>
+            <caption>IP Address Details</caption>
+            <tr>
+                <div>
+                    
+                    <th width="40%"> <span class="icon"><img src="./Image/coronavirus.png" alt=""></span> Country  </th>
+                
+               
+                <td width="60%" id="country"></td>
+            </tr>
+            <tr>
+                <th width="40%"> <span class="icon"><img src="./Image/region.png" alt=""></span> State / Region  </th>
+                
+                <td width="60%"><span id="region"></span></td>
+            </tr>
+            <tr>
+                <th width="40%"><span class="icon"><img src="./Image/australia.png" alt=""></span> District </th>
+                
+                <td width="60%"><span id="district"></span></td>
+            </tr>
+            <tr>
+                <th width="40%"><span class="icon"><img src="./Image/buildings.png" alt=""></span> City  </th>
+                
+                <td width="60%"><span id="city"></span></td>
+            </tr>
+            <tr>
+                <th width="40%"><span class="icon"><img src="./Image/coordinate-route.png" alt=""></span> Coordinates  </th>
+                
+                <td width="60%"><span id="latitude"></span>, <span id="longitude"></span></td>
+            </tr>
+            <tr>
+                <th width="40%"><span class="icon"><img src="./Image/back-in-time.png" alt=""></span> Timezone  </th>
+                
+                <td width="60%"><span id="timezone_name"></span></td>
+            </tr>
+            <tr>
+                <th width="40%"><span class="icon"><img src="./Image/hosting.png" alt=""></span> Hostname  </th>
+                
+                <td width="60%"><span id="hostname"></span></td>
+            </tr>
+            <tr>
+                <th width="40%"><span class="icon"><img src="./Image/isp.png" alt=""></span> ISP / Provider Name </th>
+                
+                <td width="60%"><span id="asn_org"></span></td>
+            </tr>
+        </table>
+    </div><br>
+    <br>
+    <copyright>Copyright 2023 - <b>Foysal Zihak</b></copyright>
+</body>
+</html>
