@@ -6,177 +6,581 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" href="Image/favicon.png" type="image/x-icon">
     <title>What is my IP | IP Info</title>
-    <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-    <script>
-        fetch('https://json.geoiplookup.io')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById("ip").innerHTML = data.ip
-            document.getElementById("region").innerHTML = data.region
-            document.getElementById("district").innerHTML = data.district
-            document.getElementById("latitude").innerHTML = data.latitude
-            document.getElementById("longitude").innerHTML = data.longitude
-            document.getElementById("timezone_name").innerHTML = data.timezone_name
-            document.getElementById("country").innerHTML = data.country_name
-            document.getElementById("asn_org").innerHTML = data.asn_org
-            document.getElementById("city").innerHTML = data.city
-            document.getElementById("hostname").innerHTML = data.hostname
-            
-        });
-    </script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
     <style>
-        body {
+        *, *::before, *::after {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            background: #EEEEEE;
-            display: flex;
-            flex-direction: column;
-            width: 70%;
-            margin: auto;
-            justify-content: center;
-            padding: 20px 0;
         }
-        div.wrapper {
-            display: flex;
+
+        :root {
+            --bg-primary: #080818;
+            --bg-secondary: #0f0f2d;
+            --glass-bg: rgba(255, 255, 255, 0.04);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent-purple: #7c3aed;
+            --accent-cyan: #06b6d4;
+            --accent-pink: #ec4899;
+            --accent-green: #10b981;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #475569;
+            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
         }
-        div.IPLocation {
-            flex: 1;
-            background-color: #FEFEFE;
-            padding:30px 60px;
-            margin-right: 20px;
-            margin-bottom: 40px;
-            box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 50px;
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
         }
-        div.ipAddr {
-            flex: 1;
-            margin-left: 20px;
-            background-color: #FEFEFE;
-            padding:30px 60px;
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at 20% 20%, rgba(124, 58, 237, 0.12) 0%, transparent 50%),
+                        radial-gradient(ellipse at 80% 10%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+                        radial-gradient(ellipse at 50% 90%, rgba(236, 72, 153, 0.08) 0%, transparent 50%);
+            animation: bgPulse 12s ease-in-out infinite alternate;
+            z-index: -1;
+        }
+
+        @keyframes bgPulse {
+            0%   { transform: scale(1) rotate(0deg); }
+            100% { transform: scale(1.05) rotate(2deg); }
+        }
+
+        /* ── HEADER ── */
+        header {
             text-align: center;
-            margin-bottom: 40px;
-            font-weight: bold;
-            box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 50px;
+            padding: 60px 20px 40px;
         }
-        div.ipAddr p {
-            background-color: #21c031;
-            padding: 8px 40px;
-            color: white;
+
+        header .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(124, 58, 237, 0.15);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            color: #a78bfa;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 6px 16px;
+            border-radius: 999px;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        header h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, #a78bfa 0%, #06b6d4 50%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+            margin-bottom: 14px;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 16px;
+            max-width: 520px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        /* ── MAIN CONTAINER ── */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        /* ── HERO CARD (IP Address) ── */
+        .hero-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 48px 40px;
+            text-align: center;
+            box-shadow: var(--card-shadow), 0 0 0 1px rgba(124,58,237,0.1) inset;
+            margin-bottom: 32px;
+            position: relative;
+            overflow: hidden;
+            animation: fadeSlideUp 0.7s ease both;
+        }
+
+        .hero-card::before {
+            content: '';
+            position: absolute;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-card .label {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .ip-display {
+            font-size: clamp(2rem, 6vw, 4rem);
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #fff 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            min-height: 1.2em;
+        }
+
+        .ip-display.loading::after {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(167,139,250,0.3);
+            border-top-color: #a78bfa;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-left: 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .ip-copy-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+            color: #fff;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .ip-copy-btn:hover {
+            opacity: 0.88;
+            transform: translateY(-2px);
+        }
+
+        .ip-copy-btn:active { transform: translateY(0); }
+
+        /* ── INFO GRID ── */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 18px;
+            margin-bottom: 32px;
+        }
+
+        .info-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 18px;
+            padding: 24px 28px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+            animation: fadeSlideUp 0.7s ease both;
+        }
+
+        .info-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(124,58,237,0.35);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 20px rgba(124,58,237,0.1);
+        }
+
+        .info-card:nth-child(1) { animation-delay: 0.05s; }
+        .info-card:nth-child(2) { animation-delay: 0.1s; }
+        .info-card:nth-child(3) { animation-delay: 0.15s; }
+        .info-card:nth-child(4) { animation-delay: 0.2s; }
+        .info-card:nth-child(5) { animation-delay: 0.25s; }
+        .info-card:nth-child(6) { animation-delay: 0.3s; }
+        .info-card:nth-child(7) { animation-delay: 0.35s; }
+        .info-card:nth-child(8) { animation-delay: 0.4s; }
+
+        .info-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .icon-purple { background: rgba(124,58,237,0.18); color: #a78bfa; }
+        .icon-cyan   { background: rgba(6,182,212,0.18);  color: #22d3ee; }
+        .icon-pink   { background: rgba(236,72,153,0.18); color: #f472b6; }
+        .icon-green  { background: rgba(16,185,129,0.18); color: #34d399; }
+        .icon-orange { background: rgba(249,115,22,0.18); color: #fb923c; }
+        .icon-blue   { background: rgba(59,130,246,0.18); color: #60a5fa; }
+        .icon-yellow { background: rgba(234,179,8,0.18);  color: #facc15; }
+        .icon-red    { background: rgba(239,68,68,0.18);  color: #f87171; }
+
+        .info-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .info-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .info-value.skeleton {
+            background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 6px;
+            height: 22px;
+            width: 70%;
+        }
+
+        @keyframes shimmer {
+            0%   { background-position: -200% 0; }
+            100% { background-position:  200% 0; }
+        }
+
+        /* ── MAP ── */
+        .map-section {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 32px;
+            animation: fadeSlideUp 0.7s 0.5s ease both;
+        }
+
+        .map-header {
+            padding: 22px 28px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .map-header i {
             font-size: 18px;
+            color: var(--accent-cyan);
         }
-        div#table_box {
-            
-            background-color: #FEFEFE;
-            padding: 60px;
-            box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 50px;
+
+        .map-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
         }
-        caption {
-            text-align: left;
-            font-size: 22px;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-        #table_box table {
+
+        #map {
+            height: 380px;
             width: 100%;
-            font-size: 18px;
-            border-collapse: collapse;
         }
-        #table_box tr:nth-child(2n+1) th {
-            background: #dd03ff;
+
+        /* Leaflet dark override */
+        .leaflet-tile-pane { filter: brightness(0.65) saturate(0.8) hue-rotate(5deg); }
+
+        /* ── FOOTER ── */
+        footer {
+            text-align: center;
+            padding: 32px 20px;
+            color: var(--text-muted);
+            font-size: 14px;
+            border-top: 1px solid var(--glass-border);
         }
-        #table_box th {
-            color: white;
-            background: #08f0ab;
-            font-weight: bold;
-            text-align: left;
-            padding: 14px;
-            
-            
+
+        footer a {
+            color: #a78bfa;
+            text-decoration: none;
         }
-        #table_box td {
-            padding: 0px 20px;
+
+        footer a:hover { text-decoration: underline; }
+
+        /* ── ANIMATIONS ── */
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
-        #table_box tr:nth-child(2n+1) td {
-            background: #D9D9D9;
+
+        /* ── TOAST ── */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: linear-gradient(135deg, #7c3aed, #06b6d4);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: 9999;
+            white-space: nowrap;
         }
-        #table_box tr:nth-child(2n) td {
-            background: #F1F1F1;
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
-        #table_box tr td:hover {
-            background: #666;
-            color: #FFF;
-        }
-        span.icon {
-            margin-top: 4px;
-            margin-right: 8px;
-            
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 600px) {
+            header { padding: 40px 20px 28px; }
+            .hero-card { padding: 36px 24px; }
+            .info-grid { grid-template-columns: 1fr; }
+            #map { height: 260px; }
         }
     </style>
 </head>
 <body>
-    <div class="wrapper">
-        <div class="IPLocation animate__animated animate__backInDown">
-            <h2>Where is My IP Location?</h2>
-            <p>Find out what your public IPv4 and IPv6 address is revealing about you! My IP address information shows your IP location; city, region, country, ISP / Provider Name</p>
-            <p>Do you want to hide you're IP Address? <br> 
-            <span class="design"> Click here!</span> </p>
+
+    <!-- Header -->
+    <header>
+        <div class="badge">
+            <i class="fa-solid fa-wifi"></i>
+            IP Intelligence Tool
         </div>
-        <div class="ipAddr animate__animated animate__backInRight animate__slow">
-            <h2>Your IP Address is</h2>
-            <p id="ip"></p>
+        <h1>What Is My IP?</h1>
+        <p>Instantly reveal your public IP address along with location, ISP, timezone, and network details.</p>
+    </header>
+
+    <div class="container">
+
+        <!-- Hero: IP Address -->
+        <div class="hero-card">
+            <div class="label">Your Public IP Address</div>
+            <div class="ip-display loading" id="ip"></div>
+            <button class="ip-copy-btn" onclick="copyIP()">
+                <i class="fa-regular fa-copy"></i> Copy IP
+            </button>
         </div>
+
+        <!-- Info Cards Grid -->
+        <div class="info-grid">
+
+            <div class="info-card">
+                <div class="info-icon icon-purple"><i class="fa-solid fa-flag"></i></div>
+                <div class="info-body">
+                    <div class="info-label">Country</div>
+                    <div class="info-value skeleton" id="country"></div>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-icon icon-cyan"><i class="fa-solid fa-map"></i></div>
+                <div class="info-body">
+                    <div class="info-label">State / Region</div>
+                    <div class="info-value skeleton" id="region"></div>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-icon icon-pink"><i class="fa-solid fa-landmark"></i></div>
+                <div class="info-body">
+                    <div class="info-label">District</div>
+                    <div class="info-value skeleton" id="district"></div>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-icon icon-green"><i class="fa-solid fa-city"></i></div>
+                <div class="info-body">
+                    <div class="info-label">City</div>
+                    <div class="info-value skeleton" id="city"></div>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-icon icon-orange"><i class="fa-solid fa-location-crosshairs"></i></div>
+                <div class="info-body">
+                    <div class="info-label">Coordinates</div>
+                    <div class="info-value skeleton" id="coordinates"></div>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-icon icon-blue"><i class="fa-solid fa-clock"></i></div>
+                <div class="info-body">
+                    <div class="info-label">Timezone</div>
+                    <div class="info-value skeleton" id="timezone_name"></div>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-icon icon-yellow"><i class="fa-solid fa-server"></i></div>
+                <div class="info-body">
+                    <div class="info-label">Hostname</div>
+                    <div class="info-value skeleton" id="hostname"></div>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-icon icon-red"><i class="fa-solid fa-building-shield"></i></div>
+                <div class="info-body">
+                    <div class="info-label">ISP / Provider</div>
+                    <div class="info-value skeleton" id="asn_org"></div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Map -->
+        <div class="map-section">
+            <div class="map-header">
+                <i class="fa-solid fa-map-location-dot"></i>
+                <h3>Your Approximate Location</h3>
+            </div>
+            <div id="map"></div>
+        </div>
+
     </div>
-    <div id="table_box" class="animate__animated animate__fadeIn animate__slower animate__delay-1s">
-        <table>
-            <caption>IP Address Details</caption>
-            <tr>
-                <div>
-                    
-                    <th width="40%"> <span class="icon"><img src="./Image/coronavirus.png" alt=""></span> Country  </th>
-                
-               
-                <td width="60%" id="country"></td>
-            </tr>
-            <tr>
-                <th width="40%"> <span class="icon"><img src="./Image/region.png" alt=""></span> State / Region  </th>
-                
-                <td width="60%"><span id="region"></span></td>
-            </tr>
-            <tr>
-                <th width="40%"><span class="icon"><img src="./Image/australia.png" alt=""></span> District </th>
-                
-                <td width="60%"><span id="district"></span></td>
-            </tr>
-            <tr>
-                <th width="40%"><span class="icon"><img src="./Image/buildings.png" alt=""></span> City  </th>
-                
-                <td width="60%"><span id="city"></span></td>
-            </tr>
-            <tr>
-                <th width="40%"><span class="icon"><img src="./Image/coordinate-route.png" alt=""></span> Coordinates  </th>
-                
-                <td width="60%"><span id="latitude"></span>, <span id="longitude"></span></td>
-            </tr>
-            <tr>
-                <th width="40%"><span class="icon"><img src="./Image/back-in-time.png" alt=""></span> Timezone  </th>
-                
-                <td width="60%"><span id="timezone_name"></span></td>
-            </tr>
-            <tr>
-                <th width="40%"><span class="icon"><img src="./Image/hosting.png" alt=""></span> Hostname  </th>
-                
-                <td width="60%"><span id="hostname"></span></td>
-            </tr>
-            <tr>
-                <th width="40%"><span class="icon"><img src="./Image/isp.png" alt=""></span> ISP / Provider Name </th>
-                
-                <td width="60%"><span id="asn_org"></span></td>
-            </tr>
-        </table>
-    </div><br>
-    <br>
-    <copyright>Copyright 2023 - <b>Foysal Zihak</b></copyright>
+
+    <!-- Footer -->
+    <footer>
+        <p>Copyright &copy; 2026 &mdash; Made by <a href="https://github.com/fzihak" target="_blank" rel="noopener">Foysal Zihak</a></p>
+    </footer>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast">
+        <i class="fa-solid fa-check"></i>&nbsp; IP copied to clipboard!
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        let ipMap = null;
+
+        function setVal(id, value) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.remove('skeleton');
+            el.textContent = value || '—';
+        }
+
+        function copyIP() {
+            const ip = document.getElementById('ip').textContent.trim();
+            if (!ip || ip === '—') return;
+            navigator.clipboard.writeText(ip).then(() => showToast());
+        }
+
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        function initMap(lat, lng) {
+            if (ipMap) return;
+            ipMap = L.map('map', { zoomControl: true, scrollWheelZoom: false }).setView([lat, lng], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 18
+            }).addTo(ipMap);
+
+            const pulseIcon = L.divIcon({
+                className: '',
+                html: `<div style="
+                    width:20px;height:20px;
+                    background:rgba(124,58,237,0.9);
+                    border:3px solid #a78bfa;
+                    border-radius:50%;
+                    box-shadow:0 0 0 8px rgba(124,58,237,0.25),0 0 0 16px rgba(124,58,237,0.1);
+                "></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            L.marker([lat, lng], { icon: pulseIcon }).addTo(ipMap);
+        }
+
+        fetch('https://json.geoiplookup.io')
+            .then(res => res.json())
+            .then(data => {
+                // Remove loading spinner
+                const ipEl = document.getElementById('ip');
+                ipEl.classList.remove('loading');
+                ipEl.textContent = data.ip || '—';
+
+                setVal('country',       data.country_name);
+                setVal('region',        data.region);
+                setVal('district',      data.district);
+                setVal('city',          data.city);
+                setVal('coordinates',   `${data.latitude}, ${data.longitude}`);
+                setVal('timezone_name', data.timezone_name);
+                setVal('hostname',      data.hostname);
+                setVal('asn_org',       data.asn_org);
+
+                const lat = parseFloat(data.latitude);
+                const lng = parseFloat(data.longitude);
+                if (!isNaN(lat) && !isNaN(lng)) initMap(lat, lng);
+            })
+            .catch(() => {
+                const ipEl = document.getElementById('ip');
+                ipEl.classList.remove('loading');
+                ipEl.textContent = 'Unavailable';
+                ['country','region','district','city','coordinates','timezone_name','hostname','asn_org']
+                    .forEach(id => setVal(id, 'Could not fetch data'));
+            });
+    </script>
 </body>
 </html>
