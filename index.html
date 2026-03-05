@@ -1,586 +1,598 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="shortcut icon" href="Image/favicon.png" type="image/x-icon">
-    <title>What is my IP | IP Info</title>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="shortcut icon" href="Image/favicon.png" type="image/x-icon">
+  <title>What is My IP — Advanced IP Intelligence</title>
+  <meta name="description" content="Find your public IP address, location, ISP, timezone, browser info and security analysis.">
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-
-    <style>
-        *, *::before, *::after {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --bg-primary: #080818;
-            --bg-secondary: #0f0f2d;
-            --glass-bg: rgba(255, 255, 255, 0.04);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --accent-purple: #7c3aed;
-            --accent-cyan: #06b6d4;
-            --accent-pink: #ec4899;
-            --accent-green: #10b981;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --text-muted: #475569;
-            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            overflow-x: hidden;
-            position: relative;
-        }
-
-        /* Animated background */
-        body::before {
-            content: '';
-            position: fixed;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(ellipse at 20% 20%, rgba(124, 58, 237, 0.12) 0%, transparent 50%),
-                        radial-gradient(ellipse at 80% 10%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
-                        radial-gradient(ellipse at 50% 90%, rgba(236, 72, 153, 0.08) 0%, transparent 50%);
-            animation: bgPulse 12s ease-in-out infinite alternate;
-            z-index: -1;
-        }
-
-        @keyframes bgPulse {
-            0%   { transform: scale(1) rotate(0deg); }
-            100% { transform: scale(1.05) rotate(2deg); }
-        }
-
-        /* ── HEADER ── */
-        header {
-            text-align: center;
-            padding: 60px 20px 40px;
-        }
-
-        header .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(124, 58, 237, 0.15);
-            border: 1px solid rgba(124, 58, 237, 0.3);
-            color: #a78bfa;
-            font-size: 13px;
-            font-weight: 500;
-            padding: 6px 16px;
-            border-radius: 999px;
-            margin-bottom: 20px;
-            letter-spacing: 0.5px;
-        }
-
-        header h1 {
-            font-size: clamp(2rem, 5vw, 3.5rem);
-            font-weight: 800;
-            background: linear-gradient(135deg, #a78bfa 0%, #06b6d4 50%, #ec4899 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            line-height: 1.2;
-            margin-bottom: 14px;
-        }
-
-        header p {
-            color: var(--text-secondary);
-            font-size: 16px;
-            max-width: 520px;
-            margin: 0 auto;
-            line-height: 1.7;
-        }
-
-        /* ── MAIN CONTAINER ── */
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 0 24px 80px;
-        }
-
-        /* ── HERO CARD (IP Address) ── */
-        .hero-card {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 24px;
-            padding: 48px 40px;
-            text-align: center;
-            box-shadow: var(--card-shadow), 0 0 0 1px rgba(124,58,237,0.1) inset;
-            margin-bottom: 32px;
-            position: relative;
-            overflow: hidden;
-            animation: fadeSlideUp 0.7s ease both;
-        }
-
-        .hero-card::before {
-            content: '';
-            position: absolute;
-            top: -60px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
-        .hero-card .label {
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--text-muted);
-            margin-bottom: 16px;
-        }
-
-        .ip-display {
-            font-size: clamp(2rem, 6vw, 4rem);
-            font-weight: 800;
-            letter-spacing: -1px;
-            background: linear-gradient(135deg, #fff 0%, #a78bfa 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 8px;
-            min-height: 1.2em;
-        }
-
-        .ip-display.loading::after {
-            content: '';
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border: 2px solid rgba(167,139,250,0.3);
-            border-top-color: #a78bfa;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            vertical-align: middle;
-            margin-left: 12px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .ip-copy-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 20px;
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
-            color: #fff;
-            border: none;
-            padding: 12px 28px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s, transform 0.2s;
-            font-family: 'Inter', sans-serif;
-        }
-
-        .ip-copy-btn:hover {
-            opacity: 0.88;
-            transform: translateY(-2px);
-        }
-
-        .ip-copy-btn:active { transform: translateY(0); }
-
-        /* ── INFO GRID ── */
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 18px;
-            margin-bottom: 32px;
-        }
-
-        .info-card {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 18px;
-            padding: 24px 28px;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            box-shadow: var(--card-shadow);
-            transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
-            animation: fadeSlideUp 0.7s ease both;
-        }
-
-        .info-card:hover {
-            transform: translateY(-4px);
-            border-color: rgba(124,58,237,0.35);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 20px rgba(124,58,237,0.1);
-        }
-
-        .info-card:nth-child(1) { animation-delay: 0.05s; }
-        .info-card:nth-child(2) { animation-delay: 0.1s; }
-        .info-card:nth-child(3) { animation-delay: 0.15s; }
-        .info-card:nth-child(4) { animation-delay: 0.2s; }
-        .info-card:nth-child(5) { animation-delay: 0.25s; }
-        .info-card:nth-child(6) { animation-delay: 0.3s; }
-        .info-card:nth-child(7) { animation-delay: 0.35s; }
-        .info-card:nth-child(8) { animation-delay: 0.4s; }
-
-        .info-icon {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            flex-shrink: 0;
-        }
-
-        .icon-purple { background: rgba(124,58,237,0.18); color: #a78bfa; }
-        .icon-cyan   { background: rgba(6,182,212,0.18);  color: #22d3ee; }
-        .icon-pink   { background: rgba(236,72,153,0.18); color: #f472b6; }
-        .icon-green  { background: rgba(16,185,129,0.18); color: #34d399; }
-        .icon-orange { background: rgba(249,115,22,0.18); color: #fb923c; }
-        .icon-blue   { background: rgba(59,130,246,0.18); color: #60a5fa; }
-        .icon-yellow { background: rgba(234,179,8,0.18);  color: #facc15; }
-        .icon-red    { background: rgba(239,68,68,0.18);  color: #f87171; }
-
-        .info-body {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .info-label {
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1.2px;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-        }
-
-        .info-value {
-            font-size: 17px;
-            font-weight: 600;
-            color: var(--text-primary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .info-value.skeleton {
-            background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-            border-radius: 6px;
-            height: 22px;
-            width: 70%;
-        }
-
-        @keyframes shimmer {
-            0%   { background-position: -200% 0; }
-            100% { background-position:  200% 0; }
-        }
-
-        /* ── MAP ── */
-        .map-section {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: var(--card-shadow);
-            margin-bottom: 32px;
-            animation: fadeSlideUp 0.7s 0.5s ease both;
-        }
-
-        .map-header {
-            padding: 22px 28px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-bottom: 1px solid var(--glass-border);
-        }
-
-        .map-header i {
-            font-size: 18px;
-            color: var(--accent-cyan);
-        }
-
-        .map-header h3 {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        #map {
-            height: 380px;
-            width: 100%;
-        }
-
-        /* Leaflet dark override */
-        .leaflet-tile-pane { filter: brightness(0.65) saturate(0.8) hue-rotate(5deg); }
-
-        /* ── FOOTER ── */
-        footer {
-            text-align: center;
-            padding: 32px 20px;
-            color: var(--text-muted);
-            font-size: 14px;
-            border-top: 1px solid var(--glass-border);
-        }
-
-        footer a {
-            color: #a78bfa;
-            text-decoration: none;
-        }
-
-        footer a:hover { text-decoration: underline; }
-
-        /* ── ANIMATIONS ── */
-        @keyframes fadeSlideUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ── TOAST ── */
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%) translateY(20px);
-            background: linear-gradient(135deg, #7c3aed, #06b6d4);
-            color: #fff;
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 500;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s, transform 0.3s;
-            z-index: 9999;
-            white-space: nowrap;
-        }
-
-        .toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        /* ── RESPONSIVE ── */
-        @media (max-width: 600px) {
-            header { padding: 40px 20px 28px; }
-            .hero-card { padding: 36px 24px; }
-            .info-grid { grid-template-columns: 1fr; }
-            #map { height: 260px; }
-        }
-    </style>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Flag Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css">
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- Header -->
-    <header>
-        <div class="badge">
-            <i class="fa-solid fa-wifi"></i>
-            IP Intelligence Tool
-        </div>
-        <h1>What Is My IP?</h1>
-        <p>Instantly reveal your public IP address along with location, ISP, timezone, and network details.</p>
-    </header>
+  <!-- Animated gradient orbs -->
+  <div class="bg-orbs" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
 
+  <!-- ══ NAVBAR ══ -->
+  <nav class="navbar">
+    <a href="#" class="navbar-brand">
+      <div class="brand-icon"><i class="fa-solid fa-wifi"></i></div>
+      <span>IP Intelligence</span>
+    </a>
+
+    <form class="search-form" id="search-form" onsubmit="handleSearch(event)">
+      <input type="text" id="ip-search" placeholder="Search any IP or domain…"
+             autocomplete="off" spellcheck="false" maxlength="255">
+      <button type="submit" title="Lookup IP"><i class="fa-solid fa-magnifying-glass"></i></button>
+    </form>
+
+    <div class="navbar-right">
+      <span class="realtime-clock" id="realtime-clock"></span>
+      <button class="icon-btn" onclick="toggleTheme()" title="Toggle dark / light mode">
+        <i id="theme-icon" class="fa-solid fa-sun"></i>
+      </button>
+      <button class="icon-btn" onclick="exportJSON()" title="Export JSON">
+        <i class="fa-solid fa-download"></i>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ══ MAIN ══ -->
+  <main>
     <div class="container">
 
-        <!-- Hero: IP Address -->
-        <div class="hero-card">
-            <div class="label">Your Public IP Address</div>
-            <div class="ip-display loading" id="ip"></div>
-            <button class="ip-copy-btn" onclick="copyIP()">
-                <i class="fa-regular fa-copy"></i> Copy IP
-            </button>
+      <!-- ── Hero ── -->
+      <section class="hero">
+        <div class="hero-label">
+          <i class="fa-solid fa-circle-dot" style="color:var(--green-l)"></i>
+          Live Detection
         </div>
 
-        <!-- Info Cards Grid -->
+        <div class="hero-ip-wrap">
+          <div class="hero-flag-row">
+            <span class="fi flag-icon" id="country-flag"></span>
+            <span class="country-label info-value skeleton" id="qs-country"></span>
+          </div>
+          <div class="ip-display loading" id="ip-display">&#8203;</div>
+          <span class="ip-type-badge" id="ip-type-badge">IPv4</span>
+        </div>
+
+        <div class="hero-actions">
+          <button class="btn btn-primary" onclick="copyIP()">
+            <i class="fa-regular fa-copy"></i> Copy IP
+          </button>
+          <button class="btn btn-ghost" onclick="shareIP()">
+            <i class="fa-solid fa-share-nodes"></i> Share
+          </button>
+          <button class="btn btn-ghost" onclick="lookupIP()">
+            <i class="fa-solid fa-rotate"></i> Refresh
+          </button>
+          <button class="btn btn-ghost" onclick="exportJSON()">
+            <i class="fa-solid fa-file-export"></i> Export JSON
+          </button>
+        </div>
+      </section>
+
+      <!-- ── Quick Stats Bar ── -->
+      <section class="quick-stats">
+        <div class="qs-card">
+          <div class="qs-icon">🏙️</div>
+          <div class="qs-value info-value skeleton" id="qs-city"></div>
+          <div class="qs-label">City / Region</div>
+        </div>
+        <div class="qs-card">
+          <div class="qs-icon">🌐</div>
+          <div class="qs-value info-value skeleton" id="qs-isp"></div>
+          <div class="qs-label">ISP</div>
+        </div>
+        <div class="qs-card">
+          <div class="qs-icon">🕐</div>
+          <div class="qs-value info-value skeleton" id="qs-tz"></div>
+          <div class="qs-label">Timezone</div>
+        </div>
+        <div class="qs-card">
+          <div class="qs-icon">📡</div>
+          <div class="qs-value info-value skeleton" id="qs-asn"></div>
+          <div class="qs-label">ASN</div>
+        </div>
+      </section>
+
+      <!-- ── Tab Navigation ── -->
+      <div class="tabs-nav" role="tablist">
+        <button class="tab-btn active" data-tab="tab-location" onclick="switchTab('tab-location')" role="tab" aria-selected="true">
+          <i class="fa-solid fa-location-dot"></i> Location
+        </button>
+        <button class="tab-btn" data-tab="tab-network" onclick="switchTab('tab-network')" role="tab">
+          <i class="fa-solid fa-network-wired"></i> Network
+        </button>
+        <button class="tab-btn" data-tab="tab-browser" onclick="switchTab('tab-browser')" role="tab">
+          <i class="fa-solid fa-desktop"></i> Browser
+        </button>
+        <button class="tab-btn" data-tab="tab-security" onclick="switchTab('tab-security')" role="tab">
+          <i class="fa-solid fa-shield-halved"></i> Security
+        </button>
+      </div>
+
+      <!-- ════════════════════════════════
+           TAB 1 — LOCATION
+           ════════════════════════════════ -->
+      <div class="tab-pane active" id="tab-location" role="tabpanel">
+        <div class="section-header">
+          <div class="section-dot"></div>
+          <h2>Location Details</h2>
+        </div>
+
         <div class="info-grid">
 
-            <div class="info-card">
-                <div class="info-icon icon-purple"><i class="fa-solid fa-flag"></i></div>
-                <div class="info-body">
-                    <div class="info-label">Country</div>
-                    <div class="info-value skeleton" id="country"></div>
-                </div>
+          <div class="info-card">
+            <div class="info-icon ic-purple"><i class="fa-solid fa-flag"></i></div>
+            <div class="info-body">
+              <div class="info-label">Country</div>
+              <div class="info-value skeleton" id="d-country"></div>
             </div>
+            <button class="info-copy" onclick="copyField('d-country','Country')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-            <div class="info-card">
-                <div class="info-icon icon-cyan"><i class="fa-solid fa-map"></i></div>
-                <div class="info-body">
-                    <div class="info-label">State / Region</div>
-                    <div class="info-value skeleton" id="region"></div>
-                </div>
+          <div class="info-card">
+            <div class="info-icon ic-cyan"><i class="fa-solid fa-map"></i></div>
+            <div class="info-body">
+              <div class="info-label">State / Region</div>
+              <div class="info-value skeleton" id="d-region"></div>
             </div>
+            <button class="info-copy" onclick="copyField('d-region','Region')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-            <div class="info-card">
-                <div class="info-icon icon-pink"><i class="fa-solid fa-landmark"></i></div>
-                <div class="info-body">
-                    <div class="info-label">District</div>
-                    <div class="info-value skeleton" id="district"></div>
-                </div>
+          <div class="info-card">
+            <div class="info-icon ic-pink"><i class="fa-solid fa-city"></i></div>
+            <div class="info-body">
+              <div class="info-label">City</div>
+              <div class="info-value skeleton" id="d-city"></div>
             </div>
+            <button class="info-copy" onclick="copyField('d-city','City')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-            <div class="info-card">
-                <div class="info-icon icon-green"><i class="fa-solid fa-city"></i></div>
-                <div class="info-body">
-                    <div class="info-label">City</div>
-                    <div class="info-value skeleton" id="city"></div>
-                </div>
+          <div class="info-card">
+            <div class="info-icon ic-green"><i class="fa-solid fa-envelope"></i></div>
+            <div class="info-body">
+              <div class="info-label">Postal Code</div>
+              <div class="info-value skeleton" id="d-postal"></div>
             </div>
+            <button class="info-copy" onclick="copyField('d-postal','Postal code')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-            <div class="info-card">
-                <div class="info-icon icon-orange"><i class="fa-solid fa-location-crosshairs"></i></div>
-                <div class="info-body">
-                    <div class="info-label">Coordinates</div>
-                    <div class="info-value skeleton" id="coordinates"></div>
-                </div>
+          <div class="info-card">
+            <div class="info-icon ic-orange"><i class="fa-solid fa-earth-americas"></i></div>
+            <div class="info-body">
+              <div class="info-label">Continent</div>
+              <div class="info-value skeleton" id="d-continent"></div>
             </div>
+            <button class="info-copy" onclick="copyField('d-continent','Continent')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-            <div class="info-card">
-                <div class="info-icon icon-blue"><i class="fa-solid fa-clock"></i></div>
-                <div class="info-body">
-                    <div class="info-label">Timezone</div>
-                    <div class="info-value skeleton" id="timezone_name"></div>
-                </div>
+          <div class="info-card">
+            <div class="info-icon ic-blue"><i class="fa-solid fa-landmark-dome"></i></div>
+            <div class="info-body">
+              <div class="info-label">Capital</div>
+              <div class="info-value skeleton" id="d-capital"></div>
             </div>
+            <button class="info-copy" onclick="copyField('d-capital','Capital')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-            <div class="info-card">
-                <div class="info-icon icon-yellow"><i class="fa-solid fa-server"></i></div>
-                <div class="info-body">
-                    <div class="info-label">Hostname</div>
-                    <div class="info-value skeleton" id="hostname"></div>
-                </div>
+          <div class="info-card">
+            <div class="info-icon ic-yellow"><i class="fa-solid fa-phone"></i></div>
+            <div class="info-body">
+              <div class="info-label">Calling Code</div>
+              <div class="info-value skeleton" id="d-calling"></div>
             </div>
+            <button class="info-copy" onclick="copyField('d-calling','Calling code')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-            <div class="info-card">
-                <div class="info-icon icon-red"><i class="fa-solid fa-building-shield"></i></div>
-                <div class="info-body">
-                    <div class="info-label">ISP / Provider</div>
-                    <div class="info-value skeleton" id="asn_org"></div>
-                </div>
+          <div class="info-card">
+            <div class="info-icon ic-red"><i class="fa-solid fa-crosshairs"></i></div>
+            <div class="info-body">
+              <div class="info-label">Coordinates</div>
+              <div class="info-value skeleton" id="d-coords"></div>
             </div>
+            <button class="info-copy" onclick="copyField('d-coords','Coordinates')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-        </div>
+          <div class="info-card">
+            <div class="info-icon ic-cyan"><i class="fa-solid fa-clock"></i></div>
+            <div class="info-body">
+              <div class="info-label">Timezone</div>
+              <div class="info-value skeleton" id="d-timezone"></div>
+            </div>
+            <button class="info-copy" onclick="copyField('d-timezone','Timezone')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-purple"><i class="fa-solid fa-globe"></i></div>
+            <div class="info-body">
+              <div class="info-label">UTC Offset</div>
+              <div class="info-value skeleton" id="d-utc"></div>
+            </div>
+            <button class="info-copy" onclick="copyField('d-utc','UTC offset')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-green"><i class="fa-solid fa-calendar-day"></i></div>
+            <div class="info-body">
+              <div class="info-label">Local Time</div>
+              <div class="info-value skeleton" id="d-local-time"></div>
+            </div>
+            <button class="info-copy" onclick="copyField('d-local-time','Local time')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-blue"><i class="fa-brands fa-european-union"></i></div>
+            <div class="info-body">
+              <div class="info-label">EU Member / GDPR</div>
+              <div class="info-value skeleton" id="d-eu"></div>
+            </div>
+            <button class="info-copy" onclick="copyField('d-eu','EU status')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+        </div><!-- /.info-grid -->
 
         <!-- Map -->
-        <div class="map-section">
-            <div class="map-header">
-                <i class="fa-solid fa-map-location-dot"></i>
-                <h3>Your Approximate Location</h3>
+        <div class="map-wrap">
+          <div class="map-header">
+            <div class="map-header-left">
+              <i class="fa-solid fa-map-location-dot" style="color:var(--cyan-l);font-size:17px"></i>
+              <h3>Approximate Location</h3>
             </div>
-            <div id="map"></div>
+            <span class="map-coords" id="d-coords-display">—</span>
+          </div>
+          <div id="map"></div>
+        </div>
+      </div><!-- /#tab-location -->
+
+      <!-- ════════════════════════════════
+           TAB 2 — NETWORK
+           ════════════════════════════════ -->
+      <div class="tab-pane" id="tab-network" role="tabpanel">
+        <div class="section-header">
+          <div class="section-dot"></div>
+          <h2>Network Information</h2>
         </div>
 
-    </div>
+        <div class="info-grid">
 
-    <!-- Footer -->
-    <footer>
-        <p>Copyright &copy; 2026 &mdash; Made by <a href="https://github.com/fzihak" target="_blank" rel="noopener">Foysal Zihak</a></p>
-    </footer>
+          <div class="info-card">
+            <div class="info-icon ic-purple"><i class="fa-solid fa-network-wired"></i></div>
+            <div class="info-body">
+              <div class="info-label">IP Address</div>
+              <div class="info-value skeleton" id="n-ip"></div>
+            </div>
+            <button class="info-copy" onclick="copyField('n-ip','IP address')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-    <!-- Toast notification -->
-    <div class="toast" id="toast">
-        <i class="fa-solid fa-check"></i>&nbsp; IP copied to clipboard!
-    </div>
+          <div class="info-card">
+            <div class="info-icon ic-cyan"><i class="fa-solid fa-code-branch"></i></div>
+            <div class="info-body">
+              <div class="info-label">IP Version</div>
+              <div class="info-value skeleton" id="n-type"></div>
+            </div>
+            <button class="info-copy" onclick="copyField('n-type','IP version')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+          <div class="info-card">
+            <div class="info-icon ic-green"><i class="fa-solid fa-hashtag"></i></div>
+            <div class="info-body">
+              <div class="info-label">ASN</div>
+              <div class="info-value skeleton" id="n-asn"></div>
+            </div>
+            <button class="info-copy" onclick="copyField('n-asn','ASN')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-    <script>
-        let ipMap = null;
+          <div class="info-card">
+            <div class="info-icon ic-orange"><i class="fa-solid fa-building-shield"></i></div>
+            <div class="info-body">
+              <div class="info-label">ISP</div>
+              <div class="info-value skeleton" id="n-isp"></div>
+            </div>
+            <button class="info-copy" onclick="copyField('n-isp','ISP')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-        function setVal(id, value) {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.classList.remove('skeleton');
-            el.textContent = value || '—';
-        }
+          <div class="info-card">
+            <div class="info-icon ic-blue"><i class="fa-solid fa-briefcase"></i></div>
+            <div class="info-body">
+              <div class="info-label">Organization</div>
+              <div class="info-value skeleton" id="n-org"></div>
+            </div>
+            <button class="info-copy" onclick="copyField('n-org','Organization')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-        function copyIP() {
-            const ip = document.getElementById('ip').textContent.trim();
-            if (!ip || ip === '—') return;
-            navigator.clipboard.writeText(ip).then(() => showToast());
-        }
+          <div class="info-card">
+            <div class="info-icon ic-pink"><i class="fa-solid fa-at"></i></div>
+            <div class="info-body">
+              <div class="info-label">Domain</div>
+              <div class="info-value skeleton" id="n-domain"></div>
+            </div>
+            <button class="info-copy" onclick="copyField('n-domain','Domain')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-        function showToast() {
-            const toast = document.getElementById('toast');
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2500);
-        }
+        </div>
+      </div><!-- /#tab-network -->
 
-        function initMap(lat, lng) {
-            if (ipMap) return;
-            ipMap = L.map('map', { zoomControl: true, scrollWheelZoom: false }).setView([lat, lng], 10);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-                maxZoom: 18
-            }).addTo(ipMap);
+      <!-- ════════════════════════════════
+           TAB 3 — BROWSER
+           ════════════════════════════════ -->
+      <div class="tab-pane" id="tab-browser" role="tabpanel">
+        <div class="section-header">
+          <div class="section-dot"></div>
+          <h2>Browser &amp; Device Info</h2>
+        </div>
 
-            const pulseIcon = L.divIcon({
-                className: '',
-                html: `<div style="
-                    width:20px;height:20px;
-                    background:rgba(124,58,237,0.9);
-                    border:3px solid #a78bfa;
-                    border-radius:50%;
-                    box-shadow:0 0 0 8px rgba(124,58,237,0.25),0 0 0 16px rgba(124,58,237,0.1);
-                "></div>`,
-                iconSize: [20, 20],
-                iconAnchor: [10, 10]
-            });
-            L.marker([lat, lng], { icon: pulseIcon }).addTo(ipMap);
-        }
+        <div class="info-grid">
 
-        fetch('https://json.geoiplookup.io')
-            .then(res => res.json())
-            .then(data => {
-                // Remove loading spinner
-                const ipEl = document.getElementById('ip');
-                ipEl.classList.remove('loading');
-                ipEl.textContent = data.ip || '—';
+          <div class="info-card">
+            <div class="info-icon ic-blue"><i class="fa-solid fa-window-maximize"></i></div>
+            <div class="info-body">
+              <div class="info-label">Browser</div>
+              <div class="info-value" id="br-browser">Detecting…</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-browser','Browser')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-                setVal('country',       data.country_name);
-                setVal('region',        data.region);
-                setVal('district',      data.district);
-                setVal('city',          data.city);
-                setVal('coordinates',   `${data.latitude}, ${data.longitude}`);
-                setVal('timezone_name', data.timezone_name);
-                setVal('hostname',      data.hostname);
-                setVal('asn_org',       data.asn_org);
+          <div class="info-card">
+            <div class="info-icon ic-purple"><i class="fa-brands fa-windows"></i></div>
+            <div class="info-body">
+              <div class="info-label">Operating System</div>
+              <div class="info-value" id="br-os">Detecting…</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-os','OS')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
 
-                const lat = parseFloat(data.latitude);
-                const lng = parseFloat(data.longitude);
-                if (!isNaN(lat) && !isNaN(lng)) initMap(lat, lng);
-            })
-            .catch(() => {
-                const ipEl = document.getElementById('ip');
-                ipEl.classList.remove('loading');
-                ipEl.textContent = 'Unavailable';
-                ['country','region','district','city','coordinates','timezone_name','hostname','asn_org']
-                    .forEach(id => setVal(id, 'Could not fetch data'));
-            });
-    </script>
+          <div class="info-card">
+            <div class="info-icon ic-cyan"><i class="fa-solid fa-microchip"></i></div>
+            <div class="info-body">
+              <div class="info-label">Platform</div>
+              <div class="info-value" id="br-platform">—</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-platform','Platform')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-green"><i class="fa-solid fa-language"></i></div>
+            <div class="info-body">
+              <div class="info-label">Language</div>
+              <div class="info-value" id="br-language">—</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-language','Language')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-orange"><i class="fa-solid fa-display"></i></div>
+            <div class="info-body">
+              <div class="info-label">Screen Resolution</div>
+              <div class="info-value" id="br-screen">—</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-screen','Screen resolution')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-pink"><i class="fa-solid fa-palette"></i></div>
+            <div class="info-body">
+              <div class="info-label">Color Depth</div>
+              <div class="info-value" id="br-color">—</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-color','Color depth')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-yellow"><i class="fa-solid fa-clock"></i></div>
+            <div class="info-body">
+              <div class="info-label">System Timezone</div>
+              <div class="info-value" id="br-timezone">—</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-timezone','Timezone')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-red"><i class="fa-solid fa-cookie"></i></div>
+            <div class="info-body">
+              <div class="info-label">Cookies</div>
+              <div class="info-value" id="br-cookies">—</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-cookies','Cookies')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-cyan"><i class="fa-solid fa-eye-slash"></i></div>
+            <div class="info-body">
+              <div class="info-label">Do Not Track</div>
+              <div class="info-value" id="br-dnt">—</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-dnt','Do Not Track')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-purple"><i class="fa-solid fa-wifi"></i></div>
+            <div class="info-body">
+              <div class="info-label">Connection Type</div>
+              <div class="info-value" id="br-conn">—</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-conn','Connection type')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-green"><i class="fa-solid fa-arrow-down"></i></div>
+            <div class="info-body">
+              <div class="info-label">Download Speed</div>
+              <div class="info-value" id="br-downlink">—</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-downlink','Downlink')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-orange"><i class="fa-solid fa-satellite-dish"></i></div>
+            <div class="info-body">
+              <div class="info-label">Latency (RTT)</div>
+              <div class="info-value" id="br-rtt">—</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-rtt','RTT')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-blue"><i class="fa-solid fa-memory"></i></div>
+            <div class="info-body">
+              <div class="info-label">Device Memory</div>
+              <div class="info-value" id="br-memory">—</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-memory','Memory')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-pink"><i class="fa-solid fa-server"></i></div>
+            <div class="info-body">
+              <div class="info-label">CPU Cores</div>
+              <div class="info-value" id="br-cores">—</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-cores','CPU cores')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-yellow"><i class="fa-solid fa-hand-pointer"></i></div>
+            <div class="info-body">
+              <div class="info-label">Touch Support</div>
+              <div class="info-value" id="br-touch">—</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-touch','Touch support')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+          <div class="info-card">
+            <div class="info-icon ic-red"><i class="fa-solid fa-list"></i></div>
+            <div class="info-body">
+              <div class="info-label">All Languages</div>
+              <div class="info-value" id="br-languages">—</div>
+            </div>
+            <button class="info-copy" onclick="copyField('br-languages','Languages')" title="Copy"><i class="fa-regular fa-copy"></i></button>
+          </div>
+
+        </div>
+      </div><!-- /#tab-browser -->
+
+      <!-- ════════════════════════════════
+           TAB 4 — SECURITY
+           ════════════════════════════════ -->
+      <div class="tab-pane" id="tab-security" role="tabpanel">
+        <div class="section-header">
+          <div class="section-dot"></div>
+          <h2>Security Analysis</h2>
+        </div>
+
+        <div class="sec-grid">
+
+          <div class="sec-card">
+            <div>
+              <div class="sec-card-label">
+                <i class="fa-solid fa-mask" style="margin-right:8px;color:var(--orange-l)"></i>
+                VPN / Proxy Detection
+              </div>
+              <div class="sec-card-desc">Checks ISP &amp; org name against known VPN providers</div>
+            </div>
+            <span class="sec-badge neutral" id="sec-vpn">Checking…</span>
+          </div>
+
+          <div class="sec-card">
+            <div>
+              <div class="sec-card-label">
+                <i class="fa-solid fa-cloud" style="margin-right:8px;color:var(--blue-l)"></i>
+                Hosting / Cloud IP
+              </div>
+              <div class="sec-card-desc">Detects if this IP belongs to a data center or cloud provider</div>
+            </div>
+            <span class="sec-badge neutral" id="sec-hosting">Checking…</span>
+          </div>
+
+          <div class="sec-card">
+            <div>
+              <div class="sec-card-label">
+                <i class="fa-brands fa-european-union" style="margin-right:8px;color:var(--cyan-l)"></i>
+                EU / GDPR Status
+              </div>
+              <div class="sec-card-desc">Whether your IP is located in the European Union</div>
+            </div>
+            <span class="sec-badge neutral" id="sec-eu">Checking…</span>
+          </div>
+
+          <div class="sec-card">
+            <div>
+              <div class="sec-card-label">
+                <i class="fa-solid fa-tag" style="margin-right:8px;color:var(--purple-l)"></i>
+                IP Protocol Version
+              </div>
+              <div class="sec-card-desc">Whether you are using IPv4 or IPv6</div>
+            </div>
+            <span class="sec-badge info" id="sec-type">—</span>
+          </div>
+
+          <div class="sec-card">
+            <div>
+              <div class="sec-card-label">
+                <i class="fa-solid fa-building" style="margin-right:8px;color:var(--green-l)"></i>
+                Autonomous System
+              </div>
+              <div class="sec-card-desc">The ASN that owns and routes this IP address block</div>
+            </div>
+            <span class="sec-badge info" id="sec-asn">—</span>
+          </div>
+
+          <div class="sec-card">
+            <div>
+              <div class="sec-card-label">
+                <i class="fa-solid fa-lock" style="margin-right:8px;color:var(--green-l)"></i>
+                HTTPS / Encryption
+              </div>
+              <div class="sec-card-desc">Whether your connection to this page is encrypted</div>
+            </div>
+            <span class="sec-badge neutral" id="sec-https">—</span>
+          </div>
+
+        </div>
+      </div><!-- /#tab-security -->
+
+    </div><!-- /.container -->
+  </main>
+
+  <!-- ══ FOOTER ══ -->
+  <footer>
+    <p>
+      Copyright &copy; 2026 &mdash;
+      Built by <a href="https://github.com/fzihak" target="_blank" rel="noopener noreferrer">Foysal Zihak</a>
+      &nbsp;|&nbsp;
+      Data by <a href="https://ipwho.is" target="_blank" rel="noopener noreferrer">ipwho.is</a>
+    </p>
+  </footer>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <i class="fa-solid fa-circle-check"></i>
+    <span class="toast-msg"></span>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- App JS -->
+  <script src="app.js"></script>
+
 </body>
 </html>
