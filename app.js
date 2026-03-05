@@ -1,11 +1,92 @@
 // ============================================================
 // app.js — What is My IP? Advanced IP Intelligence Tool
-// Uses: ipwho.is API + flag-icons + Leaflet.js
+// Multi-API fallback: ipwho.is → ipapi.co → geoiplookup.io
 // ============================================================
 
-const API_BASE = 'https://ipwho.is/';
+// ── API chain (tried in order until one succeeds) ──
+const APIS = [
+  {
+    url: ip => ip ? `https://ipwho.is/${encodeURIComponent(ip)}` : 'https://ipwho.is/',
+    ok:  d  => d && d.success === true,
+    map: d  => ({
+      ip:            d.ip,
+      type:          d.type || 'IPv4',
+      country:       d.country,
+      country_code:  (d.country_code || '').toLowerCase(),
+      region:        d.region,
+      city:          d.city,
+      postal:        d.postal,
+      continent:     d.continent,
+      capital:       d.capital,
+      calling_code:  d.calling_code ? `+${d.calling_code}` : '—',
+      latitude:      d.latitude,
+      longitude:     d.longitude,
+      is_eu:         !!d.is_eu,
+      isp:           d.connection?.isp,
+      org:           d.connection?.org,
+      asn:           d.connection?.asn ? `AS${d.connection.asn}` : '—',
+      domain:        d.connection?.domain,
+      timezone_id:   d.timezone?.id,
+      timezone_utc:  d.timezone?.utc,
+      local_time:    d.timezone?.current_time
+                       ? d.timezone.current_time.replace('T', ' ').slice(0, 19) : null,
+    }),
+  },
+  {
+    url: ip => ip ? `https://ipapi.co/${encodeURIComponent(ip)}/json/` : 'https://ipapi.co/json/',
+    ok:  d  => d && !d.error && d.ip,
+    map: d  => ({
+      ip:            d.ip,
+      type:          d.version || 'IPv4',
+      country:       d.country_name,
+      country_code:  (d.country_code || '').toLowerCase(),
+      region:        d.region,
+      city:          d.city,
+      postal:        d.postal,
+      continent:     d.continent_code || '—',
+      capital:       '—',
+      calling_code:  d.country_calling_code || '—',
+      latitude:      d.latitude,
+      longitude:     d.longitude,
+      is_eu:         !!d.in_eu,
+      isp:           d.org,
+      org:           d.org,
+      asn:           d.asn || '—',
+      domain:        '—',
+      timezone_id:   d.timezone,
+      timezone_utc:  d.utc_offset || '—',
+      local_time:    null,
+    }),
+  },
+  {
+    url: ip => ip ? `https://json.geoiplookup.io/${encodeURIComponent(ip)}` : 'https://json.geoiplookup.io',
+    ok:  d  => d && d.ip,
+    map: d  => ({
+      ip:            d.ip,
+      type:          d.ip?.includes(':') ? 'IPv6' : 'IPv4',
+      country:       d.country_name,
+      country_code:  (d.country_code || '').toLowerCase(),
+      region:        d.region,
+      city:          d.city,
+      postal:        d.postal_code,
+      continent:     d.continent_name || '—',
+      capital:       '—',
+      calling_code:  d.calling_code ? `+${d.calling_code}` : '—',
+      latitude:      d.latitude,
+      longitude:     d.longitude,
+      is_eu:         !!d.is_eu,
+      isp:           d.asn_org,
+      org:           d.asn_org,
+      asn:           d.asn ? `AS${d.asn}` : '—',
+      domain:        d.hostname || '—',
+      timezone_id:   d.timezone_name,
+      timezone_utc:  '—',
+      local_time:    null,
+    }),
+  },
+];
 
-// IDs of elements populated from the API (will get skeleton on re-lookup)
+// ── IDs whose content comes from the API (reset to skeleton on each lookup) ──
 const API_SKELETON_IDS = [
   'qs-country', 'qs-city', 'qs-isp', 'qs-tz', 'qs-asn', 'ip-type-badge',
   'd-country', 'd-region', 'd-city', 'd-postal', 'd-continent', 'd-capital',
@@ -20,7 +101,7 @@ let currentData = null;
 let ipMap       = null;
 let mapMarker   = null;
 
-// ── DOM helpers ──
+// ── DOM helper ──
 const $ = id => document.getElementById(id);
 
 const setValue = (id, value) => {
@@ -50,10 +131,10 @@ const showToast = (msg, type = 'success') => {
   t.querySelector('.toast-msg').textContent = msg;
   t.className = `toast show ${type}`;
   clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3200);
 };
 
-// ── Copy ──
+// ── Copy helpers ──
 const copyText = (text, label = '') => {
   if (!text || text === '—') return;
   navigator.clipboard.writeText(text)
@@ -73,24 +154,23 @@ const copyField = (id, label) => {
 
 // ── Export JSON ──
 const exportJSON = () => {
-  if (!currentData) { showToast('No data yet — wait for lookup to finish', 'error'); return; }
+  if (!currentData) { showToast('No data yet — wait for lookup', 'error'); return; }
   const blob = new Blob([JSON.stringify(currentData, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `ip-${currentData.ip}.json`;
+  a.href = url; a.download = `ip-${currentData.ip}.json`;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
-  showToast('JSON file downloaded!');
+  showToast('JSON downloaded!');
 };
 
 // ── Share ──
 const shareIP = async () => {
   if (!currentData) return;
-  const text = `IP: ${currentData.ip} | ${currentData.city || ''}, ${currentData.country || ''}`;
+  const text = `My IP: ${currentData.ip} | ${currentData.city || ''}, ${currentData.country || ''}`;
   if (navigator.share) {
     try { await navigator.share({ title: 'My IP Info', text, url: location.href }); }
-    catch (_) { /* user cancelled or not supported */ }
+    catch (_) { /* user cancelled */ }
   } else {
     copyText(location.href, 'Page URL');
   }
@@ -102,7 +182,6 @@ const switchTab = tabId => {
     .forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
   document.querySelectorAll('.tab-pane')
     .forEach(p => p.classList.toggle('active', p.id === tabId));
-  // Leaflet needs a size hint when its container becomes visible
   if (tabId === 'tab-location' && ipMap) setTimeout(() => ipMap.invalidateSize(), 120);
 };
 
@@ -120,12 +199,10 @@ const initMap = (lat, lng, city, country) => {
     maxZoom: 18,
   }).addTo(ipMap);
 
-  // Accuracy radius circle
   L.circle([lat, lng], {
     radius: 28000, color: '#7c3aed', fillColor: '#7c3aed', fillOpacity: 0.06, weight: 1,
   }).addTo(ipMap);
 
-  // Custom pulsing marker
   const icon = L.divIcon({
     className: '',
     html: '<div class="map-pin"><div class="map-pin-dot"></div></div>',
@@ -152,13 +229,12 @@ const getBrowserInfo = () => {
   if      (/Windows NT 1[01]/.test(ua))   os = 'Windows 10 / 11';
   else if (/Windows NT 6\.3/.test(ua))    os = 'Windows 8.1';
   else if (/Windows NT 6\.1/.test(ua))    os = 'Windows 7';
-  else if (/Mac OS X ([\d_]+)/.test(ua))  os = `macOS ${RegExp.$1.replace(/_/g, '.')}`;
-  else if (/Android ([\d.]+)/.test(ua))   os = `Android ${RegExp.$1}`;
+  else if (/Mac OS X ([\d_]+)/.test(ua))  os = `macOS ${ua.match(/Mac OS X ([\d_]+)/)?.[1].replace(/_/g, '.')}`;
+  else if (/Android ([\d.]+)/.test(ua))   os = `Android ${ua.match(/Android ([\d.]+)/)?.[1]}`;
   else if (/iPhone|iPad/.test(ua))        os = 'iOS';
   else if (/Linux/.test(ua))              os = 'Linux';
 
   const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-
   return {
     browser:   bVer ? `${browser} ${bVer}` : browser,
     os,
@@ -173,7 +249,7 @@ const getBrowserInfo = () => {
     conn:      conn ? (conn.effectiveType || '—').toUpperCase() : 'Unknown',
     downlink:  conn?.downlink ? `~${conn.downlink} Mbps` : '—',
     rtt:       conn?.rtt      ? `${conn.rtt} ms`         : '—',
-    memory:    navigator.deviceMemory      ? `${navigator.deviceMemory} GB`       : '—',
+    memory:    navigator.deviceMemory       ? `${navigator.deviceMemory} GB`       : '—',
     cores:     navigator.hardwareConcurrency ? String(navigator.hardwareConcurrency) : '—',
     touch:     navigator.maxTouchPoints > 0 ? `${navigator.maxTouchPoints} touch point(s)` : 'None',
   };
@@ -200,7 +276,7 @@ const populateBrowser = info => {
   ].forEach(([id, val]) => setValue(id, val));
 };
 
-// ── Security heuristics (client-side, based on ISP/org name) ──
+// ── Security heuristics ──
 const setSecBadge = (id, active, labelTrue, labelFalse, activeClass = 'warn') => {
   const el = $(id);
   if (!el) return;
@@ -209,7 +285,7 @@ const setSecBadge = (id, active, labelTrue, labelFalse, activeClass = 'warn') =>
 };
 
 const analyzeSecurityFromData = data => {
-  const combined = `${data.connection?.isp || ''} ${data.connection?.org || ''}`.toLowerCase();
+  const combined = `${data.isp || ''} ${data.org || ''}`.toLowerCase();
   const hostingKw = [
     'amazon','aws','google','microsoft','azure','digitalocean','linode','vultr',
     'ovh','hetzner','cloudflare','fastly','leaseweb','equinix','akamai',
@@ -222,69 +298,65 @@ const analyzeSecurityFromData = data => {
   return {
     isHosting: hostingKw.some(k => combined.includes(k)),
     isVPN:     vpnKw.some(k => combined.includes(k)),
-    isEU:      !!data.is_eu,
   };
 };
 
-// ── Populate all UI from API data ──
+// ── Populate all normalized data into UI ──
 const populateData = data => {
-  // ── Hero ──
+  // Hero
   const ipEl = $('ip-display');
   if (ipEl) { ipEl.classList.remove('loading'); ipEl.textContent = data.ip || '—'; }
   setValue('ip-type-badge', data.type || 'IPv4');
 
-  // Country flag (flag-icons)
+  // Country flag
   const flagEl = $('country-flag');
   if (flagEl && data.country_code) {
-    flagEl.className = `fi fi-${data.country_code.toLowerCase()} flag-icon`;
+    flagEl.className = `fi fi-${data.country_code} flag-icon`;
   }
 
-  // ── Quick stats row ──
+  // Quick stats
   setValue('qs-country', data.country);
-  setValue('qs-city',    [data.city, data.region].filter(Boolean).join(', '));
-  setValue('qs-isp',     data.connection?.isp || data.connection?.org);
-  setValue('qs-tz',      data.timezone?.id);
-  setValue('qs-asn',     data.connection?.asn ? `AS${data.connection.asn}` : '—');
+  setValue('qs-city',    [data.city, data.region].filter(Boolean).join(', ') || '—');
+  setValue('qs-isp',     data.isp || data.org);
+  setValue('qs-tz',      data.timezone_id);
+  setValue('qs-asn',     data.asn);
 
-  // ── Location tab ──
-  const cc = data.country_code ? ` (${data.country_code})` : '';
-  setValue('d-country',    `${data.country || ''}${cc}`.trim() || '—');
+  // Location tab
+  setValue('d-country',    data.country);
   setValue('d-region',     data.region);
   setValue('d-city',       data.city);
   setValue('d-postal',     data.postal);
   setValue('d-continent',  data.continent);
   setValue('d-capital',    data.capital);
-  setValue('d-calling',    data.calling_code ? `+${data.calling_code}` : '—');
-  setValue('d-coords',     `${data.latitude}, ${data.longitude}`);
-  setValue('d-timezone',   data.timezone?.id);
-  setValue('d-utc',        data.timezone?.utc);
-  const lt = data.timezone?.current_time;
-  setValue('d-local-time', lt ? lt.replace('T', ' ').slice(0, 19) : '—');
+  setValue('d-calling',    data.calling_code);
+  setValue('d-coords',     (data.latitude && data.longitude) ? `${data.latitude}, ${data.longitude}` : '—');
+  setValue('d-timezone',   data.timezone_id);
+  setValue('d-utc',        data.timezone_utc);
+  setValue('d-local-time', data.local_time);
   setValue('d-eu',         data.is_eu ? 'Yes — GDPR Applies' : 'No');
-  setValue('d-coords-display', `${data.latitude}, ${data.longitude}`);
+  setValue('d-coords-display', (data.latitude && data.longitude) ? `${data.latitude}, ${data.longitude}` : '—');
 
-  // ── Network tab ──
+  // Network tab
   setValue('n-ip',     data.ip);
   setValue('n-type',   data.type);
-  setValue('n-asn',    data.connection?.asn ? `AS${data.connection.asn}` : '—');
-  setValue('n-isp',    data.connection?.isp);
-  setValue('n-org',    data.connection?.org);
-  setValue('n-domain', data.connection?.domain);
+  setValue('n-asn',    data.asn);
+  setValue('n-isp',    data.isp);
+  setValue('n-org',    data.org);
+  setValue('n-domain', data.domain);
 
-  // ── Map ──
+  // Map
   const lat = parseFloat(data.latitude);
   const lng = parseFloat(data.longitude);
   if (!isNaN(lat) && !isNaN(lng)) initMap(lat, lng, data.city, data.country);
 
-  // ── Security tab ──
+  // Security tab
   const sec = analyzeSecurityFromData(data);
   setSecBadge('sec-vpn',     sec.isVPN,     'Likely VPN / Proxy', 'Not Detected');
   setSecBadge('sec-hosting', sec.isHosting, 'Hosting / Cloud',    'Residential / ISP');
-  setSecBadge('sec-eu',      sec.isEU,      'EU — GDPR Applies',  'Non-EU', 'info');
+  setSecBadge('sec-eu',      data.is_eu,    'EU — GDPR Applies',  'Non-EU', 'info');
   setValue('sec-type', data.type || 'IPv4');
-  setValue('sec-asn',  data.connection?.asn ? `AS${data.connection.asn}` : '—');
+  setValue('sec-asn',  data.asn);
 
-  // HTTPS detection
   const httpsEl = $('sec-https');
   if (httpsEl) {
     const secure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -293,24 +365,21 @@ const populateData = data => {
   }
 };
 
-// ── Loading state ──
+// ── Skeleton / loading state ──
 const setLoading = on => {
   const ipEl = $('ip-display');
   if (!ipEl) return;
   if (on) {
     ipEl.textContent = '';
     ipEl.classList.add('loading');
-    // Clear flag
     const flagEl = $('country-flag');
     if (flagEl) flagEl.className = 'fi flag-icon';
-    // Skeleton API-backed values
     API_SKELETON_IDS.forEach(id => {
       const el = $(id);
       if (!el) return;
       el.textContent = '';
       el.classList.add('skeleton');
     });
-    // Reset security badges to "Checking…"
     ['sec-vpn', 'sec-hosting', 'sec-eu'].forEach(id => {
       const el = $(id);
       if (el) { el.textContent = 'Checking…'; el.className = 'sec-badge neutral'; }
@@ -323,33 +392,43 @@ const setLoading = on => {
 };
 
 // ── Fetch with timeout ──
-const fetchWithTimeout = (url, ms = 9000) => {
+const fetchWithTimeout = (url, ms = 8000) => {
   const ctrl  = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(timer));
 };
 
-// ── Main IP lookup ──
+// ── Main lookup — tries each API in sequence until one succeeds ──
 const lookupIP = async (ip = '') => {
   setLoading(true);
-  // Sanitise: only allow IP chars and valid domain chars
+  // Sanitise input — only allow chars valid in an IP address or domain name
   const safeIP = ip.replace(/[^a-zA-Z0-9.\-:]/g, '');
-  const url    = safeIP ? `${API_BASE}${encodeURIComponent(safeIP)}` : API_BASE;
-  try {
-    const res  = await fetchWithTimeout(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (!data.success) throw new Error(data.message || 'Lookup failed');
-    currentData = data;
-    populateData(data);
-    showToast(safeIP ? `Lookup for ${data.ip} complete!` : 'Your IP detected!');
-  } catch (err) {
-    const msg = err.name === 'AbortError' ? 'Request timed out' : (err.message || 'Failed to fetch');
-    showToast(msg, 'error');
-    setLoading(false);
-    const ipEl = $('ip-display');
-    if (ipEl) { ipEl.classList.remove('loading'); ipEl.textContent = 'Error'; }
+
+  let lastError = null;
+
+  for (const api of APIS) {
+    try {
+      const url = api.url(safeIP);
+      const res = await fetchWithTimeout(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const raw = await res.json();
+      if (!api.ok(raw)) throw new Error(raw.message || raw.reason || 'API error');
+      currentData = { ...api.map(raw), _raw: raw };
+      populateData(currentData);
+      showToast(safeIP ? `Lookup for ${currentData.ip} complete!` : 'IP detected!');
+      return; // success — stop trying more APIs
+    } catch (err) {
+      lastError = err;
+      console.warn(`[IP lookup] API failed (${err.message}), trying next…`);
+    }
   }
+
+  // All APIs failed
+  const msg = lastError?.name === 'AbortError' ? 'Request timed out' : (lastError?.message || 'All APIs failed');
+  showToast(msg, 'error');
+  setLoading(false);
+  const ipEl = $('ip-display');
+  if (ipEl) { ipEl.classList.remove('loading'); ipEl.textContent = 'Unavailable'; }
 };
 
 // ── Search handler ──
@@ -357,9 +436,8 @@ const handleSearch = e => {
   e?.preventDefault();
   const q = $('ip-search')?.value?.trim() || '';
   if (!q) { lookupIP(); return; }
-  // Only allow alphanumeric, dots, hyphens, colons (IPv4 / IPv6 / domain)
   if (!/^[a-zA-Z0-9.\-:]+$/.test(q)) {
-    showToast('Enter a valid IP address or domain name', 'error');
+    showToast('Enter a valid IP address or hostname', 'error');
     return;
   }
   lookupIP(q);
